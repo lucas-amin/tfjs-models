@@ -126,8 +126,8 @@ async function setupCamera(cameraLabel) {
 
   const videoConstraints = await getConstraints(cameraLabel);
 
-  const stream = await navigator.mediaDevices.getUserMedia(
-      {'audio': false, 'video': videoConstraints});
+  const stream = await navigator.mediaDevices.getUserMedia({'audio': false, 'video': videoConstraints});
+
   videoElement.srcObject = stream;
 
   return new Promise((resolve) => {
@@ -139,9 +139,44 @@ async function setupCamera(cameraLabel) {
   });
 }
 
+
+function setupVideoFile() {
+  const videoElement = document.getElementById('video');
+
+
+  videoElement.width = videoElement.videoWidth;
+  videoElement.height = videoElement.videoHeight;
+  
+  videoElement.load()
+  
+  return videoElement
+}
+
+async function loadVideo1(videoUrl){
+  try {
+    state.video = setupVideoFile()
+
+  } catch(e) {
+    state.video = document.createElement('video');
+
+    info.textContent = 'this browser does not support video capture,' +
+        'orrrrr this device does not have a camera';
+    info.style.display = 'block';
+
+    throw e;
+  }
+
+  state.video.play();
+}
+
+/**
+ * ------------ default load video ------------------
+ */
 async function loadVideo(cameraLabel) {
   try {
+    
     state.video = await setupCamera(cameraLabel);
+
   } catch (e) {
     let info = document.getElementById('info');
     info.textContent = 'this browser does not support video capture,' +
@@ -229,7 +264,7 @@ function setupGui(cameras) {
       .onChange(async function(cameraLabel) {
         state.changingCamera = true;
 
-        await loadVideo(cameraLabel);
+        await loadVideo1("video.mp4");
 
         state.changingCamera = false;
       });
@@ -333,8 +368,7 @@ function setupGui(cameras) {
 
   function updateGuiInputSection() {
     if (guiState.input.architecture === 'MobileNetV1') {
-      updateGuiInternalResolution(
-          defaultMobileNetInternalResolution,
+      updateGuiInternalResolution(defaultMobileNetInternalResolution, 
           ['low', 'medium', 'high', 'full']);
       updateGuiOutputStride(defaultMobileNetStride, [8, 16]);
       updateGuiMultiplier(defaultMobileNetMultiplier, [0.50, 0.75, 1.0])
@@ -345,6 +379,8 @@ function setupGui(cameras) {
       updateGuiMultiplier(defaultResNetMultiplier, [1.0]);
     }
     updateGuiQuantBytes(defaultQuantBytes, [1, 2, 4]);
+
+
   }
 
   // Architecture: there are a few PoseNet models varying in size and
@@ -372,15 +408,11 @@ function setupGui(cameras) {
       segmentation.add(guiState.segmentation, 'effect', ['mask', 'bokeh']);
 
   let multiPersonDecoding = gui.addFolder('MultiPersonDecoding');
-  multiPersonDecoding.add(
-      guiState.multiPersonDecoding, 'maxDetections', 0, 20, 1);
-  multiPersonDecoding.add(
-      guiState.multiPersonDecoding, 'scoreThreshold', 0.0, 1.0);
+  multiPersonDecoding.add(guiState.multiPersonDecoding, 'maxDetections', 0, 20, 1);
+  multiPersonDecoding.add(guiState.multiPersonDecoding, 'scoreThreshold', 0.0, 1.0);
   multiPersonDecoding.add(guiState.multiPersonDecoding, 'nmsRadius', 0, 30, 1);
-  multiPersonDecoding.add(
-      guiState.multiPersonDecoding, 'numKeypointForMatching', 1, 17, 1);
-  multiPersonDecoding.add(
-      guiState.multiPersonDecoding, 'refineSteps', 1, 10, 1);
+  multiPersonDecoding.add(guiState.multiPersonDecoding, 'numKeypointForMatching', 1, 17, 1);
+  multiPersonDecoding.add(guiState.multiPersonDecoding, 'refineSteps', 1, 10, 1);
   multiPersonDecoding.open();
 
   algorithmController.onChange(function(value) {
@@ -477,6 +509,10 @@ function setupGui(cameras) {
 
   gui.add(guiState, 'showFps').onChange(showFps => {
     if (showFps) {
+      // state.video = document.getElementById('v_'+element.id)
+      state.video.currentTime = 0;
+      state.video.play();
+
       document.body.appendChild(stats.dom);
     } else {
       document.body.removeChild(stats.dom);
@@ -708,8 +744,14 @@ export async function bindPage() {
   document.getElementById('loading').style.display = 'none';
   document.getElementById('main').style.display = 'inline-block';
 
-  await loadVideo(guiState.camera);
+  var test = false;
 
+  if (test) {
+    await loadVideo(guiState.camera);
+  } else {
+    loadVideo1("video.mp4");
+  }
+  
   let cameras = await getVideoInputs();
 
   setupFPS();
